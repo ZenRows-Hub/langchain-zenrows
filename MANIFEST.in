@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include pyproject.toml
+include langchain_zenrows/py.typed
+recursive-include langchain_zenrows *.py
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

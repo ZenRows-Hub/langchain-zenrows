@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "langchain-zenrows"
+version = "0.1.0"
+description = "A LangChain integration tool that provides reliable web scraping capabilities at any scale using ZenRows' Universal Scraper API"
+authors = [{name = "Yuvraj Chandra", email = "support@zenrows.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+keywords = [
+    "langchain",
+    "zenrows", 
+    "web scraping",
+    "llm",
+    "ai",
+    "ml",
+    "data extraction"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "langchain-core>=0.3.0",
+    "requests>=2.31.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0",
+    "langchain-tests>=0.3.0",
+]
+dev = [
+    "ruff>=0.1.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/ZenRows-Hub/langchain-zenrows"
+Repository = "https://github.com/ZenRows-Hub/langchain-zenrows"
+Documentation = "https://github.com/ZenRows-Hub/langchain-zenrows"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["langchain_zenrows*"]
