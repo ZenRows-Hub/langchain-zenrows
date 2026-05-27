@@ -224,8 +224,37 @@ class TestZenRowsUniversalScraper:
         assert len(scraper.description) > 50  # Should be descriptive
 
 
-class TestAdaptiveStealthMode:
-    """Test Adaptive Stealth Mode (mode=auto) support."""
+class TestIsJsRequired:
+    """Unit tests for ZenRowsUniversalScraper._is_js_required."""
+
+    def setup_method(self):
+        self.scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
+
+    def test_returns_false_for_empty_params(self):
+        assert self.scraper._is_js_required({}) is False
+
+    def test_returns_false_for_url_only(self):
+        assert self.scraper._is_js_required({"url": "https://example.com"}) is False
+
+    @pytest.mark.parametrize("param", [
+        "screenshot",
+        "screenshot_fullpage",
+        "screenshot_selector",
+        "js_instructions",
+        "json_response",
+        "wait",
+        "wait_for",
+    ])
+    def test_returns_true_for_each_js_param(self, param):
+        assert self.scraper._is_js_required({param: "some_value"}) is True
+
+    def test_returns_false_when_js_params_are_none(self):
+        params = {"screenshot": None, "wait": None, "js_instructions": None}
+        assert self.scraper._is_js_required(params) is False
+
+
+class TestAdaptiveStealthModeSchema:
+    """Test Adaptive Stealth Mode input schema validation (no HTTP calls)."""
 
     def test_mode_auto_in_input_schema(self):
         """Test that mode=auto is accepted by the input schema."""
@@ -242,108 +271,68 @@ class TestAdaptiveStealthMode:
     def test_mode_invalid_value_rejected(self):
         """Test that mode only accepts 'auto'."""
         with pytest.raises(ValidationError):
-            ZenRowsUniversalScraperInput(url="https://example.com", mode="manual")
+            ZenRowsUniversalScraperInput(url="https://example.com", mode="this-is-not-a-mode")
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
+
+@patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
+class TestAdaptiveStealthModeRequests:
+    """Test Adaptive Stealth Mode HTTP request behaviour.
+
+    The patch is applied at the class level so every test receives mock_get
+    as its last argument — the target path only needs to be maintained here.
+    """
+
+    BASE_URL = "https://example.com"
+
+    def setup_method(self):
+        self.scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
+
+    def _scrape(self, mock_get, **kwargs) -> dict:
+        """Stub the response, call _run with the fixed test URL, and return the API params."""
+        mock_get.return_value = Mock(text="<html>content</html>", content=b"\x89PNG...")
+        self.scraper._run(url=self.BASE_URL, **kwargs)
+        return mock_get.call_args[1]["params"]
+
     def test_mode_auto_sent_as_query_param(self, mock_get):
         """Test that mode=auto is forwarded to the ZenRows API."""
-        mock_response = Mock()
-        mock_response.text = "<html>content</html>"
-        mock_get.return_value = mock_response
-
-        scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
-        scraper._run(url="https://example.com", mode="auto")
-
-        params = mock_get.call_args[1]["params"]
+        params = self._scrape(mock_get, mode="auto")
         assert params["mode"] == "auto"
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
     def test_mode_auto_does_not_force_js_render(self, mock_get):
         """In Adaptive Stealth Mode, js_render should not be auto-enabled."""
-        mock_response = Mock()
-        mock_response.text = "<html>content</html>"
-        mock_get.return_value = mock_response
-
-        scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
         # wait_for normally forces js_render=True, but not in mode=auto
-        scraper._run(url="https://example.com", mode="auto", wait_for=".content")
-
-        params = mock_get.call_args[1]["params"]
+        params = self._scrape(mock_get, mode="auto", wait_for=".content")
         assert params.get("js_render") is None or params.get("js_render") is False
         assert params["mode"] == "auto"
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
     def test_mode_auto_does_not_force_premium_proxy(self, mock_get):
         """In Adaptive Stealth Mode, premium_proxy should not be auto-enabled for proxy_country."""
-        mock_response = Mock()
-        mock_response.text = "<html>content</html>"
-        mock_get.return_value = mock_response
-
-        scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
         # proxy_country normally forces premium_proxy=True, but not in mode=auto
-        scraper._run(url="https://example.com", mode="auto", proxy_country="us")
-
-        params = mock_get.call_args[1]["params"]
+        params = self._scrape(mock_get, mode="auto", proxy_country="us")
         assert params.get("premium_proxy") is None or params.get("premium_proxy") is False
         assert params["proxy_country"] == "us"
         assert params["mode"] == "auto"
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
     def test_mode_auto_compatible_with_js_instructions(self, mock_get):
         """Test that js_instructions works alongside mode=auto."""
-        mock_response = Mock()
-        mock_response.text = "<html>content</html>"
-        mock_get.return_value = mock_response
-
-        scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
-        scraper._run(
-            url="https://example.com",
-            mode="auto",
-            js_instructions='[{"scroll_y": 500}]',
-        )
-
-        params = mock_get.call_args[1]["params"]
+        params = self._scrape(mock_get, mode="auto", js_instructions='[{"scroll_y": 500}]')
         assert params["mode"] == "auto"
         assert params["js_instructions"] == '[{"scroll_y": 500}]'
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
     def test_without_mode_auto_js_render_still_forced(self, mock_get):
         """Without mode=auto, js_render is still auto-enabled as before."""
-        mock_response = Mock()
-        mock_response.text = "<html>content</html>"
-        mock_get.return_value = mock_response
-
-        scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
-        scraper._run(url="https://example.com", wait_for=".content")
-
-        params = mock_get.call_args[1]["params"]
+        params = self._scrape(mock_get, wait_for=".content")
         assert params["js_render"] is True
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
     def test_mode_auto_still_injects_screenshot_base_param(self, mock_get):
         """In Adaptive Stealth Mode, screenshot=true is still injected for screenshot variants."""
-        mock_response = Mock()
-        mock_response.content = b"\x89PNG..."
-        mock_get.return_value = mock_response
-
-        scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
-        scraper._run(url="https://example.com", mode="auto", screenshot_fullpage="true")
-
-        params = mock_get.call_args[1]["params"]
+        params = self._scrape(mock_get, mode="auto", screenshot_fullpage="true")
         assert params["mode"] == "auto"
         assert params["screenshot_fullpage"] == "true"
         assert params["screenshot"] == "true"
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
     def test_without_mode_auto_screenshot_base_param_still_injected(self, mock_get):
         """Without mode=auto, screenshot=true is still auto-injected for screenshot variants."""
-        mock_response = Mock()
-        mock_response.content = b"\x89PNG..."
-        mock_get.return_value = mock_response
-
-        scraper = ZenRowsUniversalScraper(zenrows_api_key="test-key")
-        scraper._run(url="https://example.com", screenshot_fullpage="true")
-
-        params = mock_get.call_args[1]["params"]
+        params = self._scrape(mock_get, screenshot_fullpage="true")
         assert params["screenshot"] == "true"
         assert params["js_render"] is True

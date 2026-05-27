@@ -67,13 +67,16 @@ class ZenRowsUniversalScraperInput(BaseModel):
         description="Extract specific elements using CSS selectors (JSON format).",
     )
     autoparse: Optional[bool] = Field(
-        default=None, description="Automatically extract structured data from HTML."
+        default=None,
+        description="Automatically extract structured data from HTML."
     )
     screenshot: Optional[str] = Field(
-        default=None, description="Capture an above-the-fold screenshot of the page."
+        default=None,
+        description="Capture an above-the-fold screenshot of the page."
     )
     screenshot_fullpage: Optional[str] = Field(
-        default=None, description="Capture a full-page screenshot."
+        default=None,
+        description="Capture a full-page screenshot."
     )
     screenshot_selector: Optional[str] = Field(
         default=None,
@@ -165,6 +168,20 @@ class ZenRowsUniversalScraper(BaseTool):
                 "variable or pass zenrows_api_key parameter."
             )
 
+    @staticmethod
+    def _is_js_required(params: Dict[str, Any]) -> bool:
+        """Return True if any supplied parameter implicitly requires JS rendering."""
+        js_required_params = [
+            "screenshot",
+            "screenshot_fullpage",
+            "screenshot_selector",
+            "js_instructions",
+            "json_response",
+            "wait",
+            "wait_for",
+        ]
+        return any(params.get(param) for param in js_required_params)
+
     def _prepare_request_params(
         self, tool_input: Union[str, Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -180,20 +197,7 @@ class ZenRowsUniversalScraper(BaseTool):
         adaptive_stealth = params.get("mode") == "auto"
 
         if not adaptive_stealth:
-            # Auto-enable js_render for parameters that require JavaScript rendering
-            js_required_params = [
-                "screenshot",
-                "screenshot_fullpage",
-                "screenshot_selector",
-                "js_instructions",
-                "json_response",
-                "wait",
-                "wait_for",
-            ]
-            js_required = any(params.get(param) for param in js_required_params)
-
-            if js_required:
-                # If any parameter requiring JS is provided, enable js_render
+            if self._is_js_required(params):
                 params["js_render"] = True
 
             # Auto-enable premium_proxy when proxy_country is specified
