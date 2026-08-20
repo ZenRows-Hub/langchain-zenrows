@@ -3,11 +3,11 @@ Automatically extract structured data like links, headings, etc.
 """
 
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Extract multiple data types automatically
 result = scraper.invoke(

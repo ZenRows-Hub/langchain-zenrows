@@ -28,7 +28,7 @@ def run_command(cmd, description):
 
 
 def check_api_key():
-    """Check if ZenRows API key is set."""
+    """Check if Zenrows API key is set."""
     api_key = os.environ.get("ZENROWS_API_KEY")
     if api_key:
         print(f"✅ ZENROWS_API_KEY is set (starts with: {api_key[:10]}...)")
@@ -58,7 +58,7 @@ def main():
 
     args = parser.parse_args()
 
-    print("🧪 LangChain-ZenRows Test Runner")
+    print("🧪 LangChain-Zenrows Test Runner")
     print("=" * 50)
 
     # Check environment

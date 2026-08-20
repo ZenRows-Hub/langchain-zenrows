@@ -1,6 +1,6 @@
-"""Integration tests for ZenRows Universal Scraper.
+"""Integration tests for Zenrows Fetch.
 
-These tests make real API calls to ZenRows and require a valid API key.
+These tests make real API calls to Zenrows and require a valid API key.
 Set ZENROWS_API_KEY environment variable to run these tests.
 """
 
@@ -175,7 +175,7 @@ class TestZenRowsUniversalScraperIntegration:
 
 @pytest.mark.integration
 @pytest.mark.slow
-class TestZenRowsLongRunningIntegration:
+class TestZenrowsLongRunningIntegration:
     """Long-running integration tests."""
 
     @pytest.fixture
@@ -195,7 +195,7 @@ class TestZenRowsLongRunningIntegration:
 
 
 @pytest.mark.integration
-class TestZenRowsErrorScenarios:
+class TestZenrowsErrorScenarios:
     """Test various error scenarios with real API."""
 
     @pytest.fixture
@@ -210,7 +210,7 @@ class TestZenRowsErrorScenarios:
         with pytest.raises(ValueError) as exc_info:
             invalid_scraper.invoke({"url": "https://httpbin.io/html"})
 
-        assert "Invalid ZenRows API key" in str(exc_info.value)
+        assert "Invalid Zenrows API key" in str(exc_info.value)
 
     def test_malformed_css_extractor_real_api(self, scraper):
         """Test malformed CSS extractor with real API call."""

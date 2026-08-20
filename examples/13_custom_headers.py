@@ -3,12 +3,12 @@ Scrape using custom headers.
 """
 
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
-# Set your ZenRows API key
+# Set your Zenrows API key
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Scrape with JavaScript rendering and premium proxies
 result = scraper.invoke(

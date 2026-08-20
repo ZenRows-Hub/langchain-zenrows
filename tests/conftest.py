@@ -28,7 +28,7 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture(scope="session")
 def zenrows_api_key():
-    """Provide ZenRows API key for testing."""
+    """Provide Zenrows API key for testing."""
     api_key = os.environ.get("ZENROWS_API_KEY")
     if not api_key:
         pytest.skip("ZENROWS_API_KEY environment variable not set")
@@ -37,7 +37,7 @@ def zenrows_api_key():
 
 @pytest.fixture(scope="session")
 def has_zenrows_api_key():
-    """Check if ZenRows API key is available."""
+    """Check if Zenrows API key is available."""
     return bool(os.environ.get("ZENROWS_API_KEY"))
 
 

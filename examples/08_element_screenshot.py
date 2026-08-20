@@ -4,11 +4,11 @@ Capture screenshots of specific page elements.
 
 import os
 import base64
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Screenshot a specific element
 result = scraper.invoke(

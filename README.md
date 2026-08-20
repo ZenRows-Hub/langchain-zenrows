@@ -1,6 +1,6 @@
 # langchain-zenrows
 
-The langchain-zenrows integration tool enables LangChain agents to scrape and access web content at any scale using ZenRows' enterprise-grade infrastructure. 
+The langchain-zenrows integration tool enables LangChain agents to scrape and access web content at any scale using Zenrows' enterprise-grade infrastructure. 
 
 Whether you need to scrape JavaScript-heavy single-page applications, bypass anti-bot systems, access geo-restricted content, or extract structured data at scale, this integration provides the tools and reliability needed for modern AI applications.
 
@@ -20,21 +20,23 @@ pip install langchain-zenrows
 
 ## Usage
 
-To use the ZenRows Universal Scraper with LangChain, you'll need a ZenRows API key. You can sign up for free at [ZenRows](https://app.zenrows.com/register?prod=universal_scraper).
+To use the Zenrows Fetch with LangChain, you'll need a Zenrows API key. You can sign up for free at [Zenrows](https://app.zenrows.com/register?prod=fetch).
 
 > For more comprehensive examples and use cases, see the `examples/` folder.
+
+> **Renamed:** this tool was previously exported as `ZenRowsUniversalScraper`. That name still works (it's a deprecated alias that redirects to `ZenrowsFetch` and will keep working until removed in a future release), but new code should import `ZenrowsFetch`.
 
 ### Basic Usage
 
 ```python
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
-# Set your ZenRows API key
+# Set your Zenrows API key
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
 # Initialize the tool
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Scrape a simple webpage
 result = scraper.invoke({"url": "https://httpbin.io/html"})
@@ -45,12 +47,12 @@ print(result)
 
 ```python
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
-# Set your ZenRows API key
+# Set your Zenrows API key
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Scrape with JavaScript rendering and premium proxies
 result = scraper.invoke({
@@ -70,19 +72,19 @@ See the [API Reference](#api-reference) section below for more available paramet
 ### Using with LangChain Agents
 
 ```python
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 from langchain_openai import ChatOpenAI  # or your preferred LLM
 from langgraph.prebuilt import create_react_agent
 import os
 
-# Set your ZenRows API key
+# Set your Zenrows API key
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 os.environ["OPENAI_API_KEY"] = "<YOUR_OPEN_AI_API_KEY>"
 
 
 # Initialize components
 llm = ChatOpenAI(model="gpt-4o-mini")
-zenrows_tool = ZenRowsUniversalScraper()
+zenrows_tool = ZenrowsFetch()
 
 # Create agent
 agent = create_react_agent(llm, [zenrows_tool])
@@ -106,12 +108,12 @@ Extract specific data using CSS selectors:
 ```python
 import json
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
-# Set your ZenRows API key
+# Set your Zenrows API key
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Extract specific elements
 css_selector = json.dumps({
@@ -131,12 +133,12 @@ Access geo-restricted content:
 
 ```python
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
-# Set your ZenRows API key
+# Set your Zenrows API key
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Check your IP location
 result = scraper.invoke({
@@ -149,17 +151,17 @@ print(result)  # Shows the US IP being used
 
 ## API Reference
 
-### ZenRowsUniversalScraper
+### ZenrowsFetch
 
-Main tool class for web scraping with ZenRows.
+Main tool class for web scraping with Zenrows.
 
 **Parameters:**
 
-- `zenrows_api_key` (str, optional): Your ZenRows API key. If not provided, looks for `ZENROWS_API_KEY` environment variable.
+- `zenrows_api_key` (str, optional): Your Zenrows API key. If not provided, looks for `ZENROWS_API_KEY` environment variable.
 
 **Input Schema:**
 
-For complete parameter documentation and details, see the [official ZenRows API Reference](https://docs.zenrows.com/universal-scraper-api/api-reference#parameter-overview).
+For complete parameter documentation and details, see the [official Zenrows API Reference](https://docs.zenrows.com/fetch/api-reference#parameter-overview).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -204,5 +206,5 @@ For complete parameter documentation and details, see the [official ZenRows API 
 
 ## Support
 
-- [ZenRows Documentation](https://docs.zenrows.com/)
+- [Zenrows Documentation](https://docs.zenrows.com/)
 - [LangChain Documentation](https://python.langchain.com/)

@@ -1,4 +1,4 @@
-"""Unit tests for ZenRows Universal Scraper."""
+"""Unit tests for Zenrows Fetch."""
 
 import json
 import os
@@ -98,13 +98,13 @@ class TestZenRowsUniversalScraperInput:
 
 
 class TestZenRowsUniversalScraper:
-    """Test the ZenRows Universal Scraper tool."""
+    """Test the Zenrows Fetch tool."""
 
     def test_initialization_with_api_key(self):
         """Test successful initialization with API key."""
         scraper = ZenRowsUniversalScraper(zenrows_api_key="test-api-key")
         assert scraper.zenrows_api_key == "test-api-key"
-        assert scraper.name == "zenrows_universal_scraper"
+        assert scraper.name == "zenrows_fetch"
         assert scraper.base_url == "https://api.zenrows.com/v1/"
 
     @patch.dict(os.environ, {"ZENROWS_API_KEY": "env-api-key"})
@@ -118,7 +118,7 @@ class TestZenRowsUniversalScraper:
         """Test initialization fails without API key."""
         with pytest.raises(ValueError) as exc_info:
             ZenRowsUniversalScraper()
-        assert "ZenRows API key is required" in str(exc_info.value)
+        assert "Zenrows API key is required" in str(exc_info.value)
 
     def test_args_schema(self):
         """Test that args_schema is properly set."""
@@ -133,7 +133,7 @@ class TestZenRowsUniversalScraper:
         assert "javascript" in description.lower()
         assert "anti-bot" in description.lower()
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
+    @patch("langchain_zenrows.zenrows_fetch.requests.get")
     def test_run_success_html_response(self, mock_get):
         """Test successful _run method with HTML response."""
         # Setup mock response
@@ -154,7 +154,7 @@ class TestZenRowsUniversalScraper:
         assert call_args[1]["params"]["url"] == "https://example.com"
         assert call_args[1]["params"]["apikey"] == "test-key"
 
-    @patch("langchain_zenrows.zenrows_universal_scraper.requests.get")
+    @patch("langchain_zenrows.zenrows_fetch.requests.get")
     def test_run_with_all_parameters(self, mock_get):
         """Test _run method with all parameters."""
         # Setup mock response
@@ -219,6 +219,6 @@ class TestZenRowsUniversalScraper:
         assert hasattr(scraper, "_arun")
 
         # Test specific properties
-        assert scraper.name == "zenrows_universal_scraper"
+        assert scraper.name == "zenrows_fetch"
         assert isinstance(scraper.description, str)
         assert len(scraper.description) > 50  # Should be descriptive

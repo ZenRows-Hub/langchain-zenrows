@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "langchain-zenrows"
 version = "0.1.0"
-description = "A LangChain integration tool that provides reliable web scraping capabilities at any scale using ZenRows' Universal Scraper API"
+description = "A LangChain integration tool that provides reliable web scraping capabilities at any scale using Zenrows' Fetch API"
 authors = [{name = "Yuvraj Chandra", email = "support@zenrows.com"}]
 readme = "README.md"
 license = {text = "MIT"}

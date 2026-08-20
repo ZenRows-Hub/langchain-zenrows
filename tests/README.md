@@ -96,7 +96,7 @@ pytest tests/integration_tests/test_zenrows_universal_scraper.py::TestZenRowsUni
 ## Environment Variables
 
 ### Required for Integration Tests
-- `ZENROWS_API_KEY`: Your ZenRows API key
+- `ZENROWS_API_KEY`: Your Zenrows API key
 
 ### Optional
 - `PYTEST_CURRENT_TEST`: Set automatically by pytest

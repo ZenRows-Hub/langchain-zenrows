@@ -3,7 +3,7 @@ Agent that scrapes news sites and provides summaries in markdown format.
 """
 
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
@@ -13,7 +13,7 @@ os.environ["OPENAI_API_KEY"] = "<YOUR_OPENAI_API_KEY>"
 
 # Initialize components
 llm = ChatOpenAI(model="gpt-4o-mini")
-zenrows_tool = ZenRowsUniversalScraper()
+zenrows_tool = ZenrowsFetch()
 
 # Create agent
 agent = create_react_agent(llm, [zenrows_tool])

@@ -4,11 +4,11 @@ Capture full-page screenshots of websites.
 
 import os
 import base64
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Capture full-page screenshot
 result = scraper.invoke(

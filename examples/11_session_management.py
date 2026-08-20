@@ -3,11 +3,11 @@ Maintain consistent sessions across multiple requests.
 """
 
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 session_id = 12345  # Use same session for related requests
 

@@ -3,13 +3,13 @@ Basic web scraping example demonstrating simple HTML extraction.
 """
 
 import os
-from langchain_zenrows import ZenRowsUniversalScraper
+from langchain_zenrows import ZenrowsFetch
 
-# Set your ZenRows API key
+# Set your Zenrows API key
 os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
 
 # Initialize the scraper
-scraper = ZenRowsUniversalScraper()
+scraper = ZenrowsFetch()
 
 # Basic scraping
 result = scraper.invoke({"url": "https://httpbin.io/html"})
