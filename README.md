@@ -149,6 +149,51 @@ result = scraper.invoke({
 print(result)  # Shows the US IP being used
 ```
 
+### Extract - structured data without CSS selectors
+
+`ZenrowsExtract` uses AI to return structured data instead of raw HTML. It's a
+separate tool from `ZenrowsFetch` with its own, leaner input schema - options
+that Fetch supports but Extract's server ignores (`autoparse`, `css_extractor`,
+`response_type`, `outputs`) aren't offered here at all, so there's nothing to
+set that silently does nothing. The result is JSON with `parsed` (the
+structured data) and `html` (the raw page, included during beta):
+
+```python
+import json
+import os
+from langchain_zenrows import ZenrowsExtract
+
+# Set your Zenrows API key
+os.environ["ZENROWS_API_KEY"] = "<YOUR_ZENROWS_API_KEY>"
+
+extractor = ZenrowsExtract()
+
+result = extractor.invoke({"url": "https://www.scrapingcourse.com/ecommerce/"})
+data = json.loads(result)
+print(data["parsed"])
+```
+
+See the [Extract docs](https://docs.zenrows.com/extract/setup) for details on
+what `parsed` looks like for different page types.
+
+**Autoparse fallback:** `extract="auto"` (the default) is a domain-gated open
+beta - if the target site isn't enabled yet, Zenrows returns an `AUTH010`
+error. By default, `ZenrowsExtract` catches that and retries once with the
+general-purpose Autoparse feature instead of raising, matching the CLI's
+`zenrows extract` behavior. The result is re-wrapped into the same
+`{"parsed": ..., "html": ...}` shape, plus `extract_fallback: "autoparse"` so
+you can tell a fallback happened:
+
+```python
+data = json.loads(result)
+if data.get("extract_fallback"):
+    print("This domain isn't in the Extract beta yet - used Autoparse instead.")
+print(data["parsed"])
+```
+
+Pass `fallback_to_autoparse=False` to disable this and always raise on
+`AUTH010` instead.
+
 ## API Reference
 
 ### ZenrowsFetch
@@ -188,6 +233,30 @@ For complete parameter documentation and details, see the [official Zenrows API 
 | `json_response` | bool | Capture network requests in JSON format, including XHR or Fetch data. Ideal for intercepting API calls made by the web page (default: False) |
 | `outputs` | str | Specify which data types to extract from the scraped HTML. Accepted values: emails, phone_numbers, headings, images, audios, videos, links, menus, hashtags, metadata, tables, favicon |
 
+### ZenrowsExtract
+
+Tool class for AI-powered structured extraction (beta). Same `zenrows_api_key` parameter as `ZenrowsFetch`. Returns JSON (`parsed` + `html`) instead of raw HTML/Markdown.
+
+For complete details, see the [official Extract docs](https://docs.zenrows.com/extract/setup).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `url` | str | **Required.** The URL to extract data from |
+| `extract` | str | Extraction mode: "auto" (default), "native", or "standard" |
+| `js_render` | bool | Enable JavaScript rendering with a headless browser (default: False) |
+| `premium_proxy` | bool | Use residential IPs to bypass anti-bot protection (default: False) |
+| `proxy_country` | str | Two-letter country code for the request's IP (requires Premium Proxies) |
+| `session_id` | int | Maintain the same IP for multiple requests for up to 10 minutes |
+| `custom_headers` | dict | Include custom headers in your request |
+| `wait_for` | str | Wait for a specific CSS Selector to appear before returning content |
+| `wait` | int | Wait a fixed amount of milliseconds after page load |
+| `block_resources` | str | Block specific resources (images, fonts, etc.) from loading |
+| `original_status` | bool | Return the original HTTP status code from the target page (default: False) |
+| `allowed_status_codes` | str | Return content even if the target page fails with the specified status codes |
+| `fallback_to_autoparse` | bool | Retry once with Autoparse if `extract="auto"` hits a domain not yet enabled for the Extract beta (default: True) |
+
+Not offered here - the server ignores these when `extract` is set, so they aren't in this schema: `autoparse`, `css_extractor`, `response_type`, `outputs`.
+
 ## Features
 
 - **JavaScript Rendering**: Scrape modern SPAs and dynamic content
@@ -195,6 +264,7 @@ For complete parameter documentation and details, see the [official Zenrows API 
 - **Geo-Targeting**: Access region-specific content with 190+ countries
 - **Multiple Output Formats**: HTML, Markdown, Plaintext, PDF, Screenshots
 - **CSS Extraction**: Target specific data with CSS selectors
+- **AI-Powered Extraction (beta)**: Structured data without writing selectors, via `ZenrowsExtract`
 - **Structured Data Extraction**: Automatically extract emails, phone numbers, links, and other data types
 - **Session Management**: Maintain consistent sessions across requests
 - **Wait Conditions**: Smart waiting for dynamic content
