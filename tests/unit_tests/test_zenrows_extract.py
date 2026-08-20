@@ -184,7 +184,55 @@ class TestExtractAutoparseFallback:
         with pytest.raises(ValueError, match="HTTP error occurred: 402"):
             tool._run(url="https://example.com")
 
-        assert mock_get.call_count == 1
+
+class TestExtractAdaptiveStealth:
+    """Extract sends Adaptive Stealth Mode (wire param mode="auto") by
+    default, so targets needing js_render/premium_proxy (e.g. Zoopla)
+    escalate automatically instead of failing with REQS002."""
+
+    @patch("langchain_zenrows.zenrows_extract.requests.get")
+    def test_sends_adaptive_stealth_by_default(self, mock_get):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.text = '{"parsed": {}, "html": null}'
+        mock_get.return_value = response
+
+        tool = ZenrowsExtract(zenrows_api_key="test-key")
+        tool._run(url="https://example.com")
+
+        params = mock_get.call_args[1]["params"]
+        assert params["mode"] == "auto"
+
+    @patch("langchain_zenrows.zenrows_extract.requests.get")
+    def test_omits_wire_mode_when_disabled(self, mock_get):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.text = '{"parsed": {}, "html": null}'
+        mock_get.return_value = response
+
+        tool = ZenrowsExtract(zenrows_api_key="test-key")
+        tool._run(url="https://example.com", adaptive_stealth=False)
+
+        params = mock_get.call_args[1]["params"]
+        assert "mode" not in params
+
+    @patch("langchain_zenrows.zenrows_extract.requests.get")
+    def test_fallback_request_also_carries_adaptive_stealth(self, mock_get):
+        first_response = Mock()
+        first_response.raise_for_status.side_effect = _http_error(402, '{"code": "AUTH010"}')
+
+        second_response = Mock()
+        second_response.raise_for_status.return_value = None
+        second_response.text = "{}"
+        second_response.json.return_value = {}
+
+        mock_get.side_effect = [first_response, second_response]
+
+        tool = ZenrowsExtract(zenrows_api_key="test-key")
+        tool._run(url="https://example.com")
+
+        fallback_params = mock_get.call_args_list[1][1]["params"]
+        assert fallback_params["mode"] == "auto"
 
     @patch("langchain_zenrows.zenrows_extract.requests.get")
     def test_no_fallback_for_non_auto_mode(self, mock_get):

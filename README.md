@@ -254,6 +254,7 @@ For complete details, see the [official Extract docs](https://docs.zenrows.com/e
 | `original_status` | bool | Return the original HTTP status code from the target page (default: False) |
 | `allowed_status_codes` | str | Return content even if the target page fails with the specified status codes |
 | `fallback_to_autoparse` | bool | Retry once with Autoparse if `extract="auto"` hits a domain not yet enabled for the Extract beta (default: True) |
+| `adaptive_stealth` | bool | Send Adaptive Stealth Mode (`mode="auto"`) so a target needing `js_render`/`premium_proxy` escalates automatically instead of failing with REQS002 (default: True) |
 
 Not offered here - the server ignores these when `extract` is set, so they aren't in this schema: `autoparse`, `css_extractor`, `response_type`, `outputs`.
 
