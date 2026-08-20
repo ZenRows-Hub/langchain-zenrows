@@ -17,8 +17,9 @@ class TestZenrowsFetchInput:
     def test_minimal_valid_input(self):
         input_data = ZenrowsFetchInput(url="https://httpbin.io/html")
         assert input_data.url == "https://httpbin.io/html"
-        assert input_data.js_render is False
-        assert input_data.premium_proxy is False
+        assert input_data.js_render is None
+        assert input_data.premium_proxy is None
+        assert input_data.mode is None
 
     def test_invalid_css_extractor(self):
         with pytest.raises(ValidationError) as exc_info:
@@ -29,6 +30,14 @@ class TestZenrowsFetchInput:
         with pytest.raises(ValidationError) as exc_info:
             ZenrowsFetchInput(url="https://example.com", proxy_country="usa")
         assert "proxy_country must be a two-letter country code" in str(exc_info.value)
+
+    def test_mode_auto_accepted(self):
+        input_data = ZenrowsFetchInput(url="https://example.com", mode="auto")
+        assert input_data.mode == "auto"
+
+    def test_mode_invalid_value_rejected(self):
+        with pytest.raises(ValidationError):
+            ZenrowsFetchInput(url="https://example.com", mode="not-a-mode")
 
 
 class TestZenrowsFetch:
@@ -110,3 +119,51 @@ class TestZenrowsFetch:
             result = scraper.invoke({"url": "https://example.com"})
             assert result == "Invoked content"
             mock_run.assert_called_once()
+
+
+@patch("langchain_zenrows.zenrows_fetch.requests.get")
+class TestAdaptiveStealthMode:
+    """Adaptive Stealth Mode (mode="auto") - Zenrows manages js_render/premium_proxy
+    itself, so the client-side auto-enable heuristics must stay out of its way."""
+
+    BASE_URL = "https://example.com"
+
+    def setup_method(self):
+        self.scraper = ZenrowsFetch(zenrows_api_key="test-key")
+
+    def _scrape(self, mock_get, **kwargs) -> dict:
+        mock_get.return_value = Mock(text="<html>content</html>", content=b"\x89PNG...")
+        self.scraper._run(url=self.BASE_URL, **kwargs)
+        return mock_get.call_args[1]["params"]
+
+    def test_mode_auto_sent_as_query_param(self, mock_get):
+        params = self._scrape(mock_get, mode="auto")
+        assert params["mode"] == "auto"
+
+    def test_mode_auto_does_not_force_js_render(self, mock_get):
+        # wait_for normally forces js_render=True, but not in mode=auto
+        params = self._scrape(mock_get, mode="auto", wait_for=".content")
+        assert "js_render" not in params
+        assert params["mode"] == "auto"
+
+    def test_mode_auto_does_not_force_premium_proxy(self, mock_get):
+        # proxy_country normally forces premium_proxy=True, but not in mode=auto
+        params = self._scrape(mock_get, mode="auto", proxy_country="us")
+        assert "premium_proxy" not in params
+        assert params["proxy_country"] == "us"
+        assert params["mode"] == "auto"
+
+    def test_mode_auto_compatible_with_js_instructions(self, mock_get):
+        params = self._scrape(mock_get, mode="auto", js_instructions='[{"scroll_y": 500}]')
+        assert params["mode"] == "auto"
+        assert params["js_instructions"] == '[{"scroll_y": 500}]'
+
+    def test_without_mode_auto_js_render_still_forced(self, mock_get):
+        params = self._scrape(mock_get, wait_for=".content")
+        assert params["js_render"] is True
+
+    def test_mode_auto_still_injects_screenshot_base_param(self, mock_get):
+        params = self._scrape(mock_get, mode="auto", screenshot_fullpage="true")
+        assert params["mode"] == "auto"
+        assert params["screenshot_fullpage"] == "true"
+        assert params["screenshot"] == "true"

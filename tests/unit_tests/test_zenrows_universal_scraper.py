@@ -20,8 +20,8 @@ class TestZenRowsUniversalScraperInput:
         """Test input with only required field."""
         input_data = ZenRowsUniversalScraperInput(url="https://httpbin.io/html")
         assert input_data.url == "https://httpbin.io/html"
-        assert input_data.js_render is False
-        assert input_data.premium_proxy is False
+        assert input_data.js_render is None
+        assert input_data.premium_proxy is None
 
     def test_full_input_with_all_parameters(self):
         """Test input with all parameters."""
