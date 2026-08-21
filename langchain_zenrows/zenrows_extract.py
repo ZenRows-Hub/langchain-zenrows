@@ -69,6 +69,10 @@ class ZenrowsExtractInput(BaseModel):
         default=True,
         description="When extract='auto' hits a domain not yet enabled for the Extract beta, automatically retry once with the general-purpose Autoparse feature instead of raising. Set False to disable and always raise on that error.",
     )
+    adaptive_stealth: bool = Field(
+        default=True,
+        description="Enable Adaptive Stealth Mode (sent as mode='auto' to Zenrows) so a target needing js_render/premium_proxy escalates automatically instead of failing with REQS002. Set False to disable and set js_render/premium_proxy yourself.",
+    )
 
     @field_validator("proxy_country")
     @classmethod
@@ -140,8 +144,9 @@ class ZenrowsExtract(BaseTool):
         else:
             params = tool_input.copy()
 
-        # Local control flag, never sent on the wire.
+        # Local control flags, never sent on the wire.
         params.pop("fallback_to_autoparse", None)
+        adaptive_stealth = params.pop("adaptive_stealth", True)
 
         if autoparse_fallback:
             params.pop("extract", None)
@@ -150,6 +155,11 @@ class ZenrowsExtract(BaseTool):
             # extract=auto is the whole point of this tool - always set,
             # defaulting to "auto" if the caller didn't specify a mode.
             params["extract"] = params.get("extract") or "auto"
+
+        if adaptive_stealth:
+            # Wire-level "mode" (Adaptive Stealth Mode) - unrelated to this
+            # tool's own "extract" mode (auto/native/standard) above.
+            params["mode"] = "auto"
 
         if params.get("wait_for") or params.get("wait"):
             params["js_render"] = True
