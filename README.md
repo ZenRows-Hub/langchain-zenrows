@@ -211,6 +211,7 @@ For complete parameter documentation and details, see the [official Zenrows API 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `url` | str | **Required.** The URL to scrape |
+| `mode` | str | Set to `"auto"` to enable Adaptive Stealth Mode — Zenrows starts with the cheapest viable setup and escalates to `js_render`/`premium_proxy` only when needed, billing only for the configuration that succeeds. When set, `js_render` and `premium_proxy` aren't auto-enabled by this tool's own heuristics (Zenrows manages them) |
 | `js_render` | bool | Enable JavaScript rendering with a headless browser. Essential for modern web apps, SPAs, and sites with dynamic content (default: False) |
 | `js_instructions` | str | Execute custom JavaScript on the page to interact with elements, scroll, click buttons, or manipulate content |
 | `premium_proxy` | bool | Use residential IPs to bypass anti-bot protection. Essential for accessing protected sites (default: False) |

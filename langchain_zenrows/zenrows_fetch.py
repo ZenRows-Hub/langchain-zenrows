@@ -13,8 +13,18 @@ class ZenrowsFetchInput(BaseModel):
     """Input schema for Zenrows Fetch."""
 
     url: str = Field(description="The URL of the page you want to scrape")
+    mode: Optional[Literal["auto"]] = Field(
+        default=None,
+        description=(
+            "Enable Adaptive Stealth Mode by setting this to 'auto'. "
+            "Zenrows will automatically select the optimal configuration for each request, "
+            "starting with the cheapest viable setup and escalating to JavaScript rendering "
+            "or Premium Proxies only when needed. You are billed only for the configuration "
+            "that succeeds. Compatible with proxy_country, js_instructions, and custom_headers."
+        ),
+    )
     js_render: Optional[bool] = Field(
-        default=False,
+        default=None,
         description="Enable JavaScript rendering with a headless browser. Essential for modern web apps, SPAs, and sites with dynamic content.",
     )
     js_instructions: Optional[str] = Field(
@@ -22,7 +32,7 @@ class ZenrowsFetchInput(BaseModel):
         description="Execute custom JavaScript on the page to interact with elements, scroll, click buttons, or manipulate content.",
     )
     premium_proxy: Optional[bool] = Field(
-        default=False,
+        default=None,
         description="Use residential IPs to bypass anti-bot protection. Essential for accessing protected sites.",
     )
     proxy_country: Optional[str] = Field(
@@ -57,7 +67,7 @@ class ZenrowsFetchInput(BaseModel):
         description="Extract specific elements using CSS selectors (JSON format).",
     )
     autoparse: Optional[bool] = Field(
-        default=False, description="Automatically extract structured data from HTML."
+        default=None, description="Automatically extract structured data from HTML."
     )
     screenshot: Optional[str] = Field(
         default=None, description="Capture an above-the-fold screenshot of the page."
@@ -70,7 +80,7 @@ class ZenrowsFetchInput(BaseModel):
         description="Capture a screenshot of a specific element using CSS Selector.",
     )
     original_status: Optional[bool] = Field(
-        default=False,
+        default=None,
         description="Return the original HTTP status code from the target page.",
     )
     allowed_status_codes: Optional[str] = Field(
@@ -78,7 +88,7 @@ class ZenrowsFetchInput(BaseModel):
         description="Returns the content even if the target page fails with specified status codes. Useful for debugging or when you need content from error pages.",
     )
     json_response: Optional[bool] = Field(
-        default=False,
+        default=None,
         description="Capture network requests in JSON format, including XHR or Fetch data. Ideal for intercepting API calls made by the web page.",
     )
     screenshot_format: Optional[Literal["png", "jpeg"]] = Field(
@@ -155,6 +165,20 @@ class ZenrowsFetch(BaseTool):
                 "variable or pass zenrows_api_key parameter."
             )
 
+    @staticmethod
+    def _is_js_required(params: Dict[str, Any]) -> bool:
+        """Return True if any supplied parameter implicitly requires JS rendering."""
+        js_required_params = [
+            "screenshot",
+            "screenshot_fullpage",
+            "screenshot_selector",
+            "js_instructions",
+            "json_response",
+            "wait",
+            "wait_for",
+        ]
+        return any(params.get(param) for param in js_required_params)
+
     def _prepare_request_params(
         self, tool_input: Union[str, Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -165,21 +189,18 @@ class ZenrowsFetch(BaseTool):
         else:
             params = tool_input.copy()
 
-        # Auto-enable js_render for parameters that require JavaScript rendering
-        js_required_params = [
-            "screenshot",
-            "screenshot_fullpage",
-            "screenshot_selector",
-            "js_instructions",
-            "json_response",
-            "wait",
-            "wait_for",
-        ]
-        js_required = any(params.get(param) for param in js_required_params)
+        # In Adaptive Stealth Mode (mode=auto), Zenrows manages js_render and
+        # premium_proxy automatically, so skip auto-enabling them.
+        adaptive_stealth = params.get("mode") == "auto"
 
-        if js_required:
-            # If any parameter requiring JS is provided, enable js_render
-            params["js_render"] = True
+        if not adaptive_stealth:
+            if self._is_js_required(params):
+                # If any parameter requiring JS is provided, enable js_render
+                params["js_render"] = True
+
+            # Auto-enable premium_proxy when proxy_country is specified
+            if params.get("proxy_country"):
+                params["premium_proxy"] = True
 
         # Special handling for screenshot variants
         screenshot_variants = ["screenshot_fullpage", "screenshot_selector"]
@@ -187,10 +208,6 @@ class ZenrowsFetch(BaseTool):
             # If screenshot_fullpage or screenshot_selector is provided,
             # also enable the base screenshot parameter
             params["screenshot"] = "true"
-
-        # Auto-enable premium_proxy when proxy_country is specified
-        if params.get("proxy_country"):
-            params["premium_proxy"] = True
 
         # Add required API key
         params["apikey"] = self.zenrows_api_key
