@@ -17,6 +17,8 @@ import requests
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field, field_validator
 
+from langchain_zenrows._stealth import apply_stealth
+
 
 class ZenrowsExtractInput(BaseModel):
     """Input schema for Zenrows Extract."""
@@ -36,7 +38,7 @@ class ZenrowsExtractInput(BaseModel):
     )
     proxy_country: Optional[str] = Field(
         default=None,
-        description="Set the country of the IP used for the request (requires Premium Proxies). Use for accessing geo-restricted content.",
+        description="Set the country of the IP used for the request. Works with Adaptive Stealth Mode; otherwise Premium Proxies are enabled for it. Use for accessing geo-restricted content.",
     )
     session_id: Optional[int] = Field(
         default=None,
@@ -67,11 +69,11 @@ class ZenrowsExtractInput(BaseModel):
     )
     fallback_to_autoparse: bool = Field(
         default=True,
-        description="When extract='auto' hits a domain not yet enabled for the Extract beta, automatically retry once with the general-purpose Autoparse feature instead of raising. Set False to disable and always raise on that error.",
+        description="When extract='auto' hits a domain Extract isn't available for yet (REQS007 or AUTH010), automatically retry once with the general-purpose Autoparse feature instead of raising. Set False to disable and always raise on that error.",
     )
     adaptive_stealth: bool = Field(
         default=True,
-        description="Enable Adaptive Stealth Mode (sent as mode='auto' to Zenrows) so a target needing js_render/premium_proxy escalates automatically instead of failing with REQS002. Set False to disable and set js_render/premium_proxy yourself.",
+        description="Enable Adaptive Stealth Mode (sent as mode='auto' to Zenrows) so a target needing js_render/premium_proxy escalates automatically instead of failing with REQS002. Setting js_render, premium_proxy, wait or wait_for uses that fixed configuration instead. Set False to disable.",
     )
 
     @field_validator("proxy_country")
@@ -156,16 +158,13 @@ class ZenrowsExtract(BaseTool):
             # defaulting to "auto" if the caller didn't specify a mode.
             params["extract"] = params.get("extract") or "auto"
 
-        if adaptive_stealth:
-            # Wire-level "mode" (Adaptive Stealth Mode) - unrelated to this
-            # tool's own "extract" mode (auto/native/standard) above.
-            params["mode"] = "auto"
-
-        if params.get("wait_for") or params.get("wait"):
-            params["js_render"] = True
-
-        if params.get("proxy_country"):
-            params["premium_proxy"] = True
+        # Wire-level "mode" (Adaptive Stealth Mode) - unrelated to this
+        # tool's own "extract" mode (auto/native/standard) above.
+        apply_stealth(
+            params,
+            adaptive_stealth=adaptive_stealth,
+            js_required_params=("wait", "wait_for"),
+        )
 
         params["apikey"] = self.zenrows_api_key
 
@@ -235,11 +234,11 @@ class ZenrowsExtract(BaseTool):
     def _run(self, **kwargs) -> str:
         """Execute the Zenrows Extract request.
 
-        When `extract` is "auto" (the default) and the target domain isn't
-        yet enabled for the Extract beta - the API's `AUTH010` error - this
-        automatically retries once with Autoparse instead of raising, same
-        as the CLI's default behavior. Pass `fallback_to_autoparse=False` to
-        disable that and always raise on `AUTH010`.
+        When `extract` is "auto" (the default) and Extract isn't available
+        for the target domain yet - the API's `REQS007` (not prepared) or
+        `AUTH010` (not enabled) error - this automatically retries once with
+        Autoparse instead of raising, same as the CLI's default behavior.
+        Pass `fallback_to_autoparse=False` to disable that and always raise.
 
         Returns:
             The raw JSON response text. On a normal Extract response this is
@@ -257,12 +256,13 @@ class ZenrowsExtract(BaseTool):
             return response.text
 
         except requests.exceptions.HTTPError as e:
-            if (
-                e.response.status_code == 402
-                and mode == "auto"
-                and fallback_enabled
-                and self._error_code(e.response.text) == "AUTH010"
-            ):
+            # Extract not available for the domain yet: 403 REQS007 (not
+            # prepared) or the older 402 AUTH010 (not enabled).
+            not_available = (e.response.status_code, self._error_code(e.response.text)) in (
+                (402, "AUTH010"),
+                (403, "REQS007"),
+            )
+            if not_available and mode == "auto" and fallback_enabled:
                 try:
                     return self._run_autoparse_fallback(kwargs)
                 except requests.exceptions.HTTPError as fallback_error:

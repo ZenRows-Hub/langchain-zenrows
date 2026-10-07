@@ -211,11 +211,12 @@ For complete parameter documentation and details, see the [official Zenrows API 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `url` | str | **Required.** The URL to scrape |
-| `mode` | str | Set to `"auto"` to enable Adaptive Stealth Mode — Zenrows starts with the cheapest viable setup and escalates to `js_render`/`premium_proxy` only when needed, billing only for the configuration that succeeds. When set, `js_render` and `premium_proxy` aren't auto-enabled by this tool's own heuristics (Zenrows manages them) |
+| `adaptive_stealth` | bool | Adaptive Stealth Mode (sent as `mode="auto"`): Zenrows starts with the cheapest viable setup and escalates to `js_render`/`premium_proxy` only when needed, billing only for the configuration that succeeds. Setting `js_render`, `premium_proxy`, or a browser-only option (`wait_for`, `wait`, `js_instructions`, screenshots, `json_response`) uses that fixed configuration instead (default: True) |
+| `mode` | str | Set to `"auto"` to require Adaptive Stealth Mode even with browser-only options. Can't be combined with `js_render` or `premium_proxy` |
 | `js_render` | bool | Enable JavaScript rendering with a headless browser. Essential for modern web apps, SPAs, and sites with dynamic content (default: False) |
 | `js_instructions` | str | Execute custom JavaScript on the page to interact with elements, scroll, click buttons, or manipulate content |
 | `premium_proxy` | bool | Use residential IPs to bypass anti-bot protection. Essential for accessing protected sites (default: False) |
-| `proxy_country` | str | Set the country of the IP used for the request. Use for accessing geo-restricted content. Two-letter country code |
+| `proxy_country` | str | Set the country of the IP used for the request. Use for accessing geo-restricted content. Two-letter country code. Works with Adaptive Stealth Mode; otherwise Premium Proxies are enabled for it |
 | `session_id` | int | Maintain the same IP for multiple requests for up to 10 minutes. Essential for multi-step processes |
 | `custom_headers` | dict | Include custom headers in your request to mimic browser behavior |
 | `wait_for` | str | Wait for a specific CSS Selector to appear in the DOM before returning content |
@@ -246,7 +247,7 @@ For complete details, see the [official Extract docs](https://docs.zenrows.com/e
 | `extract` | str | Extraction mode: "auto" (default), "native", or "standard" |
 | `js_render` | bool | Enable JavaScript rendering with a headless browser (default: False) |
 | `premium_proxy` | bool | Use residential IPs to bypass anti-bot protection (default: False) |
-| `proxy_country` | str | Two-letter country code for the request's IP (requires Premium Proxies) |
+| `proxy_country` | str | Two-letter country code for the request's IP. Works with Adaptive Stealth Mode; otherwise Premium Proxies are enabled for it |
 | `session_id` | int | Maintain the same IP for multiple requests for up to 10 minutes |
 | `custom_headers` | dict | Include custom headers in your request |
 | `wait_for` | str | Wait for a specific CSS Selector to appear before returning content |
@@ -254,8 +255,8 @@ For complete details, see the [official Extract docs](https://docs.zenrows.com/e
 | `block_resources` | str | Block specific resources (images, fonts, etc.) from loading |
 | `original_status` | bool | Return the original HTTP status code from the target page (default: False) |
 | `allowed_status_codes` | str | Return content even if the target page fails with the specified status codes |
-| `fallback_to_autoparse` | bool | Retry once with Autoparse if `extract="auto"` hits a domain not yet enabled for the Extract beta (default: True) |
-| `adaptive_stealth` | bool | Send Adaptive Stealth Mode (`mode="auto"`) so a target needing `js_render`/`premium_proxy` escalates automatically instead of failing with REQS002 (default: True) |
+| `fallback_to_autoparse` | bool | Retry once with Autoparse if `extract="auto"` hits a domain Extract isn't available for yet, `REQS007` or `AUTH010` (default: True) |
+| `adaptive_stealth` | bool | Send Adaptive Stealth Mode (`mode="auto"`) so a target needing `js_render`/`premium_proxy` escalates automatically instead of failing with REQS002. Setting `js_render`, `premium_proxy`, `wait`, or `wait_for` uses that fixed configuration instead (default: True) |
 
 Not offered here - the server ignores these when `extract` is set, so they aren't in this schema: `autoparse`, `css_extractor`, `response_type`, `outputs`.
 

@@ -161,6 +161,40 @@ class TestAdaptiveStealthMode:
     def test_without_mode_auto_js_render_still_forced(self, mock_get):
         params = self._scrape(mock_get, wait_for=".content")
         assert params["js_render"] is True
+        assert "mode" not in params
+
+    def test_adaptive_stealth_is_the_default(self, mock_get):
+        params = self._scrape(mock_get)
+        assert params["mode"] == "auto"
+        assert "js_render" not in params
+        assert "premium_proxy" not in params
+        assert "adaptive_stealth" not in params
+
+    def test_default_proxy_country_goes_alone(self, mock_get):
+        params = self._scrape(mock_get, proxy_country="us")
+        assert params["mode"] == "auto"
+        assert params["proxy_country"] == "us"
+        assert "premium_proxy" not in params
+
+    @pytest.mark.parametrize("flag", ["js_render", "premium_proxy"])
+    def test_explicit_flag_drops_adaptive_stealth(self, mock_get, flag):
+        params = self._scrape(mock_get, **{flag: True})
+        assert params[flag] is True
+        assert "mode" not in params
+
+    def test_adaptive_stealth_false_is_a_plain_request(self, mock_get):
+        params = self._scrape(mock_get, adaptive_stealth=False)
+        assert "mode" not in params
+
+    def test_adaptive_stealth_false_proxy_country_enables_premium_proxy(self, mock_get):
+        params = self._scrape(mock_get, adaptive_stealth=False, proxy_country="de")
+        assert params["premium_proxy"] is True
+        assert "mode" not in params
+
+    def test_explicit_mode_auto_with_a_flag_is_rejected(self, mock_get):
+        with pytest.raises(ValueError, match="can't be combined"):
+            self._scrape(mock_get, mode="auto", js_render=True)
+        mock_get.assert_not_called()
 
     def test_mode_auto_still_injects_screenshot_base_param(self, mock_get):
         params = self._scrape(mock_get, mode="auto", screenshot_fullpage="true")
