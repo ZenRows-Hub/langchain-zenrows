@@ -2,6 +2,9 @@
 
 from typing import Any, Dict, Iterable
 
+# Adaptive Stealth Mode ignores these, so a page that needs them comes back empty.
+WAIT_PARAMS = ("wait", "wait_for")
+
 
 def apply_stealth(
     params: Dict[str, Any],
@@ -25,7 +28,8 @@ def apply_stealth(
       together with ``premium_proxy``, so it's enabled.
 
     An explicit ``mode="auto"`` from the caller is honoured as asked: it can't
-    be combined with ``js_render`` / ``premium_proxy``, and browser-only
+    be combined with ``js_render`` / ``premium_proxy``, nor with ``wait`` /
+    ``wait_for``, which Adaptive Stealth Mode ignores. Other browser-only
     options don't switch it off.
     """
     explicit_mode = params.get("mode") == "auto"
@@ -38,6 +42,13 @@ def apply_stealth(
                 "js_render or premium_proxy; Zenrows rejects them together. "
                 "Drop mode to set those yourself, or drop them to keep "
                 "Adaptive Stealth Mode."
+            )
+        waits = [p for p in WAIT_PARAMS if params.get(p)]
+        if waits:
+            raise ValueError(
+                f"mode='auto' (Adaptive Stealth Mode) ignores {' and '.join(waits)}, "
+                "so the page may come back before it has loaded. Drop mode to "
+                "wait with js_render, or drop the wait."
             )
         return
 

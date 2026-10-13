@@ -140,9 +140,16 @@ class TestAdaptiveStealthMode:
         params = self._scrape(mock_get, mode="auto")
         assert params["mode"] == "auto"
 
+    @pytest.mark.parametrize("wait", [{"wait": 3000}, {"wait_for": ".content"}])
+    def test_explicit_mode_auto_with_a_wait_is_rejected(self, mock_get, wait):
+        # Adaptive Stealth Mode ignores wait/wait_for: the page would come back empty, silently.
+        with pytest.raises(ValueError, match="ignores"):
+            self._scrape(mock_get, mode="auto", **wait)
+        mock_get.assert_not_called()
+
     def test_mode_auto_does_not_force_js_render(self, mock_get):
-        # wait_for normally forces js_render=True, but not in mode=auto
-        params = self._scrape(mock_get, mode="auto", wait_for=".content")
+        # A browser-only option other than a wait keeps mode=auto as asked
+        params = self._scrape(mock_get, mode="auto", screenshot="true")
         assert "js_render" not in params
         assert params["mode"] == "auto"
 
