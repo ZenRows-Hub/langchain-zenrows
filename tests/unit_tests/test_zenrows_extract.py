@@ -104,16 +104,45 @@ class TestZenrowsExtract:
         assert params["extract"] == "standard"
 
     @patch("langchain_zenrows.zenrows_extract.requests.get")
-    def test_proxy_country_auto_enables_premium_proxy(self, mock_get):
-        mock_response = Mock()
-        mock_response.text = "{}"
-        mock_get.return_value = mock_response
-
+    def test_proxy_country_alone_under_adaptive_stealth(self, mock_get):
+        # mode=auto + premium_proxy is rejected by the API (REQS004).
+        mock_get.return_value = Mock(text="{}")
         tool = ZenrowsExtract(zenrows_api_key="test-key")
         tool._run(url="https://example.com", proxy_country="us")
 
         params = mock_get.call_args[1]["params"]
+        assert params["mode"] == "auto"
+        assert params["proxy_country"] == "us"
+        assert "premium_proxy" not in params
+
+    @patch("langchain_zenrows.zenrows_extract.requests.get")
+    def test_proxy_country_without_stealth_enables_premium_proxy(self, mock_get):
+        mock_get.return_value = Mock(text="{}")
+        tool = ZenrowsExtract(zenrows_api_key="test-key")
+        tool._run(url="https://example.com", proxy_country="us", adaptive_stealth=False)
+
+        params = mock_get.call_args[1]["params"]
         assert params["premium_proxy"] is True
+        assert "mode" not in params
+
+    @pytest.mark.parametrize(
+        "kwargs, flag",
+        [
+            ({"js_render": True}, "js_render"),
+            ({"premium_proxy": True}, "premium_proxy"),
+            ({"wait_for": ".price"}, "js_render"),
+            ({"wait": 2000}, "js_render"),
+        ],
+    )
+    @patch("langchain_zenrows.zenrows_extract.requests.get")
+    def test_fixed_configuration_drops_adaptive_stealth(self, mock_get, kwargs, flag):
+        mock_get.return_value = Mock(text="{}")
+        tool = ZenrowsExtract(zenrows_api_key="test-key")
+        tool._run(url="https://example.com", **kwargs)
+
+        params = mock_get.call_args[1]["params"]
+        assert params[flag] is True
+        assert "mode" not in params
 
     def test_invoke_method(self):
         with patch.object(ZenrowsExtract, "_run") as mock_run:
@@ -154,6 +183,38 @@ class TestExtractAutoparseFallback:
         fallback_params = mock_get.call_args_list[1][1]["params"]
         assert fallback_params.get("autoparse") is True
         assert "extract" not in fallback_params
+
+    @patch("langchain_zenrows.zenrows_extract.requests.get")
+    def test_falls_back_to_autoparse_on_reqs007(self, mock_get):
+        first_response = Mock()
+        first_response.raise_for_status.side_effect = _http_error(
+            403, '{"code": "REQS007", "detail": "Extract has not been prepared"}'
+        )
+        second_response = Mock()
+        second_response.raise_for_status.return_value = None
+        second_response.text = '{"title": "Widget"}'
+        second_response.json.return_value = {"title": "Widget"}
+        mock_get.side_effect = [first_response, second_response]
+
+        tool = ZenrowsExtract(zenrows_api_key="test-key")
+        data = json.loads(tool._run(url="https://example.com"))
+
+        assert data["extract_fallback"] == "autoparse"
+        assert mock_get.call_count == 2
+        fallback_params = mock_get.call_args_list[1][1]["params"]
+        assert fallback_params.get("autoparse") is True
+        assert fallback_params.get("mode") == "auto"
+
+    @patch("langchain_zenrows.zenrows_extract.requests.get")
+    def test_other_403_does_not_fall_back(self, mock_get):
+        response = Mock()
+        response.raise_for_status.side_effect = _http_error(403, '{"code": "AUTH002"}')
+        mock_get.return_value = response
+
+        tool = ZenrowsExtract(zenrows_api_key="test-key")
+        with pytest.raises(ValueError):
+            tool._run(url="https://example.com")
+        assert mock_get.call_count == 1
 
     @patch("langchain_zenrows.zenrows_extract.requests.get")
     def test_fallback_disabled_raises_instead(self, mock_get):

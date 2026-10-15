@@ -2,11 +2,13 @@
 
 import json
 import os
-from typing import Any, Dict, Literal, Optional, Type, Union
+from typing import Any, ClassVar, Dict, Literal, Optional, Tuple, Type, Union
 
 import requests
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field, field_validator
+
+from langchain_zenrows._stealth import apply_stealth
 
 
 class ZenrowsFetchInput(BaseModel):
@@ -16,11 +18,19 @@ class ZenrowsFetchInput(BaseModel):
     mode: Optional[Literal["auto"]] = Field(
         default=None,
         description=(
-            "Enable Adaptive Stealth Mode by setting this to 'auto'. "
-            "Zenrows will automatically select the optimal configuration for each request, "
-            "starting with the cheapest viable setup and escalating to JavaScript rendering "
-            "or Premium Proxies only when needed. You are billed only for the configuration "
-            "that succeeds. Compatible with proxy_country, js_instructions, and custom_headers."
+            "Adaptive Stealth Mode is on by default (see adaptive_stealth), so this is "
+            "only needed to insist on it. Set to 'auto' to require it: it then can't be "
+            "combined with js_render or premium_proxy."
+        ),
+    )
+    adaptive_stealth: bool = Field(
+        default=True,
+        description=(
+            "Adaptive Stealth Mode (sent as mode='auto'), on by default: Zenrows starts with "
+            "the cheapest viable setup and escalates to JavaScript rendering or Premium "
+            "Proxies only when needed, billing only the configuration that succeeds. Setting "
+            "js_render or premium_proxy, or a browser-only option such as wait_for or a "
+            "screenshot, uses that fixed configuration instead. Set False to disable."
         ),
     )
     js_render: Optional[bool] = Field(
@@ -37,7 +47,7 @@ class ZenrowsFetchInput(BaseModel):
     )
     proxy_country: Optional[str] = Field(
         default=None,
-        description="Set the country of the IP used for the request (requires Premium Proxies). Use for accessing geo-restricted content.",
+        description="Set the country of the IP used for the request. Works with Adaptive Stealth Mode; otherwise Premium Proxies are enabled for it. Use for accessing geo-restricted content.",
     )
     session_id: Optional[int] = Field(
         default=None,
@@ -165,19 +175,21 @@ class ZenrowsFetch(BaseTool):
                 "variable or pass zenrows_api_key parameter."
             )
 
-    @staticmethod
-    def _is_js_required(params: Dict[str, Any]) -> bool:
+    # Options that only work in a browser, so they switch on js_render.
+    JS_REQUIRED_PARAMS: ClassVar[Tuple[str, ...]] = (
+        "screenshot",
+        "screenshot_fullpage",
+        "screenshot_selector",
+        "js_instructions",
+        "json_response",
+        "wait",
+        "wait_for",
+    )
+
+    @classmethod
+    def _is_js_required(cls, params: Dict[str, Any]) -> bool:
         """Return True if any supplied parameter implicitly requires JS rendering."""
-        js_required_params = [
-            "screenshot",
-            "screenshot_fullpage",
-            "screenshot_selector",
-            "js_instructions",
-            "json_response",
-            "wait",
-            "wait_for",
-        ]
-        return any(params.get(param) for param in js_required_params)
+        return any(params.get(param) for param in cls.JS_REQUIRED_PARAMS)
 
     def _prepare_request_params(
         self, tool_input: Union[str, Dict[str, Any]]
@@ -189,18 +201,11 @@ class ZenrowsFetch(BaseTool):
         else:
             params = tool_input.copy()
 
-        # In Adaptive Stealth Mode (mode=auto), Zenrows manages js_render and
-        # premium_proxy automatically, so skip auto-enabling them.
-        adaptive_stealth = params.get("mode") == "auto"
-
-        if not adaptive_stealth:
-            if self._is_js_required(params):
-                # If any parameter requiring JS is provided, enable js_render
-                params["js_render"] = True
-
-            # Auto-enable premium_proxy when proxy_country is specified
-            if params.get("proxy_country"):
-                params["premium_proxy"] = True
+        apply_stealth(
+            params,
+            adaptive_stealth=params.pop("adaptive_stealth", True),
+            js_required_params=self.JS_REQUIRED_PARAMS,
+        )
 
         # Special handling for screenshot variants
         screenshot_variants = ["screenshot_fullpage", "screenshot_selector"]
